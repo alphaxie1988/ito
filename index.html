@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ito — Theme Deck (SG Edition)</title>
+<meta name="description" content="Theme card generator for the party game ito. 300 themes, half of them Singaporean. Scale of 1 to 10.">
+<meta name="theme-color" content="#12100f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧵</text></svg>">
+<style>
+  :root{
+    --ink:#12100f;
+    --ink-2:#1c1918;
+    --line:rgba(255,255,255,.10);
+    --paper:#f6f1e7;
+    --paper-2:#ece5d7;
+    --text:#1a1614;
+    --muted:#7a6f63;
+    --red:#c8102e;
+    --red-soft:#ffe3e6;
+    --blue:#1f5f8b;
+    --blue-soft:#e2eef6;
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100dvh;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #262120 0%, transparent 60%),
+      var(--ink);
+    color:#f3ece2;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:22px 16px calc(28px + env(safe-area-inset-bottom));
+    gap:18px;
+  }
+
+  /* ---------- header ---------- */
+  header{width:100%;max-width:620px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand h1{
+    font-family:"Instrument Serif",Georgia,serif;
+    font-size:34px;font-weight:400;letter-spacing:.02em;margin:0;line-height:1;
+  }
+  .brand span{font-size:12px;color:#9b9086;letter-spacing:.14em;text-transform:uppercase}
+  .count{font-size:12px;color:#9b9086;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  /* ---------- filter ---------- */
+  .filters{width:100%;max-width:620px;display:flex;gap:8px}
+  .chip{
+    flex:1;appearance:none;cursor:pointer;
+    background:var(--ink-2);color:#cfc5ba;
+    border:1px solid var(--line);border-radius:999px;
+    padding:10px 12px;font:inherit;font-size:13px;font-weight:500;
+    transition:background .18s ease,color .18s ease,border-color .18s ease;
+  }
+  .chip:hover{background:#252120;color:#f3ece2}
+  .chip[aria-pressed="true"]{background:var(--paper);color:var(--text);border-color:var(--paper);font-weight:600}
+
+  /* ---------- card ---------- */
+  .card{
+    width:100%;max-width:620px;
+    background:linear-gradient(170deg,var(--paper) 0%,var(--paper-2) 100%);
+    color:var(--text);
+    border-radius:var(--radius);
+    padding:30px 26px 26px;
+    min-height:330px;
+    display:flex;flex-direction:column;
+    cursor:pointer;user-select:none;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset, 0 24px 60px -24px rgba(0,0,0,.75);
+    position:relative;overflow:hidden;
+  }
+  .card::after{ /* paper grain */
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;
+    background-image:radial-gradient(rgba(0,0,0,.05) 1px,transparent 1px);
+    background-size:4px 4px;
+  }
+  .card:active{transform:scale(.995)}
+  .tag{
+    align-self:flex-start;
+    font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    padding:5px 10px;border-radius:999px;
+    background:var(--blue-soft);color:var(--blue);
+  }
+  .tag.sg{background:var(--red-soft);color:var(--red)}
+  .theme{
+    font-family:"Instrument Serif",Georgia,serif;
+    font-weight:400;
+    font-size:clamp(30px,7.4vw,46px);
+    line-height:1.08;
+    margin:18px 0 6px;
+    letter-spacing:-.01em;
+  }
+  .sub{font-size:14px;color:var(--muted);margin:0 0 auto;line-height:1.5}
+
+  /* ---------- 1..10 scale ---------- */
+  .scale{margin-top:26px}
+  .ends{display:flex;justify-content:space-between;gap:16px;font-size:13px;line-height:1.35;margin-bottom:10px}
+  .ends div{max-width:46%}
+  .ends .r{text-align:right}
+  .ends b{display:block;font-family:"Instrument Serif",Georgia,serif;font-size:19px;font-weight:400;color:var(--text)}
+  .ends span{color:var(--muted)}
+  .ticks{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+  .ticks i{
+    height:10px;border-radius:3px;font-style:normal;
+    background:rgba(0,0,0,.14);
+  }
+  .nums{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:5px}
+  .nums i{font-style:normal;text-align:center;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* draw animation */
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .anim .tag,.anim .theme,.anim .sub,.anim .scale{animation:rise .34s cubic-bezier(.2,.7,.3,1) both}
+  .anim .theme{animation-delay:.03s}
+  .anim .sub{animation-delay:.06s}
+  .anim .scale{animation-delay:.09s}
+
+  /* ---------- controls ---------- */
+  .controls{width:100%;max-width:620px;display:flex;gap:10px}
+  .draw{
+    flex:1;appearance:none;cursor:pointer;font:inherit;font-size:16px;font-weight:600;
+    background:var(--red);color:#fff;border:0;border-radius:16px;padding:17px 20px;
+    box-shadow:0 10px 24px -12px rgba(200,16,46,.9);
+    transition:transform .12s ease,filter .18s ease;
+  }
+  .draw:hover{filter:brightness(1.08)}
+  .draw:active{transform:translateY(1px)}
+  .ghost{
+    appearance:none;cursor:pointer;font:inherit;font-size:14px;
+    background:transparent;color:#9b9086;border:1px solid var(--line);
+    border-radius:16px;padding:0 18px;transition:color .18s ease,border-color .18s ease;
+  }
+  .ghost:hover{color:#f3ece2;border-color:rgba(255,255,255,.28)}
+
+  .hint{max-width:620px;width:100%;font-size:12px;color:#7d736a;text-align:center;line-height:1.6}
+  .hint kbd{background:var(--ink-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;font:inherit;font-size:11px}
+
+  /* ---------- rules ---------- */
+  details{width:100%;max-width:620px;border-top:1px solid var(--line);padding-top:14px}
+  summary{cursor:pointer;font-size:13px;color:#9b9086;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";display:inline-block;transition:transform .2s ease}
+  details[open] summary::before{content:"▾ "}
+  details p{font-size:13px;color:#9b9086;line-height:1.7;margin:12px 0 0}
+  details ol{font-size:13px;color:#9b9086;line-height:1.75;padding-left:20px;margin:10px 0 0}
+  details strong{color:#e6ddd2;font-weight:600}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><h1>ito</h1><span>Theme Deck</span></div>
+  <div class="count" id="count">—</div>
+</header>
+
+<div class="filters" role="group" aria-label="Theme pool">
+  <button class="chip" data-mode="all" aria-pressed="true">All 300</button>
+  <button class="chip" data-mode="sg" aria-pressed="false">Singapore</button>
+  <button class="chip" data-mode="gen" aria-pressed="false">General</button>
+</div>
+
+<div class="card anim" id="card" role="button" tabindex="0" aria-live="polite">
+  <div class="tag" id="tag">Ready</div>
+  <div class="theme" id="theme">Tap to draw a theme</div>
+  <p class="sub" id="sub">Everyone gets a secret number from 1 to 10. Describe it as something on this scale — no numbers allowed.</p>
+  <div class="scale">
+    <div class="ends">
+      <div><b>1</b><span id="lo">the low end</span></div>
+      <div class="r"><b>10</b><span id="hi">the high end</span></div>
+    </div>
+    <div class="ticks" id="ticks"></div>
+    <div class="nums" id="nums"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="draw" id="draw">Draw theme</button>
+  <button class="ghost" id="reset" title="Reshuffle the pile">Reshuffle</button>
+</div>
+
+<p class="hint">Tap the card, or press <kbd>Space</kbd> / <kbd>→</kbd> to draw. No theme repeats until the pile runs out.</p>
+
+<details>
+  <summary>How to play (1–10 rules)</summary>
+  <ol>
+    <li>Deal every player <strong>one secret number from 1 to 10</strong> — all different. Cut ten slips of paper, or use a dice roll app.</li>
+    <li>Draw a theme card above. It sets the scale: <strong>1 is the low end, 10 is the high end.</strong></li>
+    <li>In turn, each player names something that fits the theme at roughly the value of their number. <strong>Never say a number</strong> and never say your thing is "high" or "low" outright.</li>
+    <li>Talk, compare, ask for more examples. Then play your slips face-up in <strong>ascending order</strong>, lowest first.</li>
+    <li>Every card played out of order costs the team a life. Three lives, three rounds — see how far you get.</li>
+  </ol>
+  <p>Harder variant: two numbers each, or ban the first answer everyone thinks of.</p>
+</details>
+
+<script>
+/* ---------------------------------------------------------------
+   Each theme: [ prompt, meaning of 1, meaning of 10 ]
+   --------------------------------------------------------------- */
+
+const SG = [
+  ["Hawker dishes","you would never join a queue for","you would queue 45 minutes for"],
+  ["Local desserts","will not cool you down at all","instantly cures the heat"],
+  ["Kopi orders","basically hot water","keeps you awake for two days"],
+  ["Local chilli and sambal","toddler-friendly","you will cry at the table"],
+  ["Zi char dishes","sad and forgettable","damn shiok"],
+  ["Chinese New Year snacks","one piece is enough","whole tub gone in a sitting"],
+  ["Bubble tea toppings","completely pointless","absolutely non-negotiable"],
+  ["Prata orders","a light snack","you cannot move afterwards"],
+  ["Cai png choices","not worth what they charge","a steal at that price"],
+  ["Supper food","wrong at 3am","perfect at 3am"],
+  ["Local drinks","not sweet at all","diabetes in a cup"],
+  ["Food you eat with your hands","stays clean","needs three napkins"],
+  ["Food that smells up the office","nobody notices","HR gets involved"],
+  ["Steamboat ingredients","nobody wants it","everyone fights for it"],
+  ["Mala spice levels","zero regrets","maximum regret tomorrow"],
+  ["Breakfast options here","not a real breakfast","the most proper breakfast"],
+  ["Local snacks at the supermarket","no memories attached","pure childhood"],
+  ["Food to eat on a first date","very safe","extremely risky"],
+  ["Ramadan bazaar food","plain and honest","made purely for Instagram"],
+  ["Hari Raya cookies","you politely skip","you finish the whole jar"],
+  ["Local food tourists struggle with","easy for anyone","they cannot handle it"],
+  ["Local soups","gentle","peppery enough to sweat"],
+  ["Ice kacang and chendol toppings","skip it","must have it"],
+  ["Things to order at a coffee shop at 11pm","you stay sober","you will regret tomorrow"],
+  ["Dim sum items","filler","order two more baskets"],
+  ["Nasi lemak components","optional","the entire point"],
+  ["Nyonya kueh","you would leave on the plate","you would fight your cousin for"],
+  ["Fast food in Singapore","you would never crave","you crave it weekly"],
+  ["Fruits at the wet market","no smell at all","banned on the MRT"],
+  ["Cold desserts on a 34-degree day","does nothing","saves your life"],
+  ["Food eaten in the car","leaves no trace","destroys the seats"],
+  ["Wedding banquet courses","everyone skips","everyone waits for"],
+  ["Local instant noodles","sad","restaurant quality"],
+  ["Food to eat when you are sick","makes it worse","instant cure"],
+  ["Hawker stalls in your neighbourhood","walk straight in","one-hour wait"],
+  ["MRT lines","the worst commute","the best commute"],
+  ["MRT stations","you never need to go","you pass through daily"],
+  ["Bus services","never comes","always on time"],
+  ["Ways to get around Singapore","slowest","fastest"],
+  ["Things people do on the MRT","totally fine","should be fined"],
+  ["MRT interchanges","easy to navigate","a full maze"],
+  ["Times to take the MRT","empty carriage","packed like sardines"],
+  ["Reasons given for a train delay","completely believable","come on lah"],
+  ["Places that are a pain to reach without a car","very accessible","practically Malaysia"],
+  ["Ways to travel here","cheapest","will bankrupt you"],
+  ["Costs of owning a car here","mildly annoying","physically painful"],
+  ["Grab fares at different hours","normal fare","highway robbery"],
+  ["Seats on the MRT","nobody wants it","everyone rushes for it"],
+  ["Places to find a taxi at 2am","instant ride","impossible"],
+  ["Things you see on a park connector","harmless","genuinely dangerous"],
+  ["Changi terminals","a chore to be stuck in","a joy to be stuck in"],
+  ["Times to cross the Causeway","smooth sailing","four hours of your life"],
+  ["Walking distances Singaporeans complain about","totally acceptable","unacceptably far"],
+  ["Neighbourhoods in Singapore","dead quiet","always packed"],
+  ["Malls on Orchard Road","empty on a Saturday","shoulder to shoulder"],
+  ["Places to bring a visiting tourist","boring","absolute must-visit"],
+  ["Parks and nature spots here","basically concrete","actually feels like nature"],
+  ["Places to sit with a laptop","you get chased away","you can camp all day"],
+  ["HDB estates","far from everything","unbeatable location"],
+  ["Places to be at 2pm","shady and breezy","will melt you"],
+  ["Sentosa attractions","skip it","worth the entry fee"],
+  ["Heartland town centres","nothing there","everything you need"],
+  ["Places to catch a sunset","poor view","postcard material"],
+  ["Polyclinic and hospital waits","in and out","bring a book"],
+  ["Public libraries here","noisy","completely silent"],
+  ["Places to propose in Singapore","you will be rejected","guaranteed yes"],
+  ["Things happening at a void deck","completely normal","you would call the police"],
+  ["Places on a Sunday afternoon","peaceful","impossible to move"],
+  ["Spots for a first date","a disaster","genuinely romantic"],
+  ["Tourist attractions here","a local goes once a lifetime","a local goes every month"],
+  ["Singlish phrases","everyone understands","only locals get it"],
+  ["Things Singaporeans queue for","not worth it","worth three hours"],
+  ["Kiasu behaviours","harmless","peak kiasu"],
+  ["Public figures to invite to a BBQ","would kill the vibe","would start the party"],
+  ["NS experiences","easy","genuinely traumatic"],
+  ["IPPT stations","free points","will fail you"],
+  ["Army vocations","very slack","extremely siong"],
+  ["Things in your field pack","useless weight","life saving"],
+  ["School subjects here","easy A","guaranteed fail"],
+  ["CCAs","very chill","no life left"],
+  ["Local exams","forgettable","traumatic for life"],
+  ["Things kiasu parents sign kids up for","reasonable","completely insane"],
+  ["Tuition subjects","unnecessary","absolutely essential"],
+  ["Public holidays","just another day off","the best one of the year"],
+  ["Parts of the National Day Parade","you would skip","the highlight"],
+  ["Things in the NDP funpack","straight to the bin","actual treasure"],
+  ["Reasons to chope a table","perfectly acceptable","you deserve to be judged"],
+  ["Items used to chope a seat","a weak claim","an iron-clad claim"],
+  ["CNY questions from relatives","harmless","makes you leave early"],
+  ["Ang bao amounts","mildly insulting","extremely generous"],
+  ["Wedding venues here","light ang bao","bring your bonus"],
+  ["Things Singaporeans complain about","a minor issue","a national crisis"],
+  ["Local superstitions","harmless nonsense","you must follow it"],
+  ["Neighbour behaviours in a HDB block","tolerable","email the town council tonight"],
+  ["Sounds in a HDB block at 6am","peaceful","wakes the whole block"],
+  ["Reasons to take MC","completely legit","your boss will know"],
+  ["Jobs in Singapore","badly underpaid","a money printer"],
+  ["Places to work","very chill","you will never sleep"],
+  ["Office pantry snacks","still there on Friday","gone in five minutes"],
+  ["Reasons for a work message at 11pm","fair enough","completely unacceptable"],
+  ["Lines on your payslip","tiny","the whole reason you work"],
+  ["Ways Singaporeans save money","normal thrift","extreme sport"],
+  ["Investments Singaporeans talk about","safe and boring","you will lose everything"],
+  ["Government schemes and payouts","barely helps","genuinely life-changing"],
+  ["Steps of buying a HDB flat","painless","peak stress"],
+  ["Wedding expenses here","cheap","a second mortgage"],
+  ["Reasons to switch jobs","weak reason","resign tomorrow"],
+  ["Work meetings","could have been an email","actually necessary"],
+  ["Boss behaviours","best boss ever","toxic, run"],
+  ["Company D and D prizes","consolation","the grand prize"],
+  ["Weather in Singapore","genuinely pleasant","unbearable"],
+  ["Reasons you brought an umbrella","you will be fine","you will be soaked"],
+  ["Creatures you meet in your flat","cute","you are moving out"],
+  ["Aircon temperatures","you are sweating","arctic"],
+  ["Haze days","open the windows","stay indoors"],
+  ["Wildlife in Singapore","harmless","run"],
+  ["Things you see at East Coast Park","completely normal","wah, seriously"],
+  ["Beaches here","swim happily","look only"],
+  ["Times to exercise outdoors","cool and breezy","heatstroke guaranteed"],
+  ["Things that are fined here","a minor fine","a very expensive lesson"],
+  ["Rules people quietly break","everyone does it","you will get caught"],
+  ["Things restricted in Singapore","totally reasonable","genuinely surprising"],
+  ["Queue-cutting excuses","forgivable","unforgivable"],
+  ["Neighbour disputes","settle over kopi","see you in court"],
+  ["Things done in a lift","fine","the camera will catch you"],
+  ["Public behaviour","socially acceptable","you end up on the internet"],
+  ["Complaints worth making","let it go","email today"],
+  ["Public campaigns and slogans","forgettable","iconic"],
+  ["Local brands","nobody remembers","national treasure"],
+  ["Local shows and films","cringe","a genuine classic"],
+  ["Local songs","obscure","everyone sings along"],
+  ["Local mascots","slightly creepy","beloved"],
+  ["Things in an old provision shop","forgotten","iconic"],
+  ["Childhood playground games","boring","the very best"],
+  ["Old playgrounds and estates","modern","pure nostalgia"],
+  ["Things in your grandmother's house","brand new","pure heritage"],
+  ["Apps on a Singaporean's phone","deleted after one use","on the home screen forever"],
+  ["Reasons to drive to JB","not worth the jam","worth three hours at the checkpoint"],
+  ["Long weekend destinations","too far to bother","perfect"],
+  ["Souvenirs for overseas friends","straight into the bin","they will love it"],
+  ["Things that make you feel Singaporean","not really","very much so"],
+  ["Complaints on local forums","completely valid","wah, relax"],
+  ["Ways to spend a Sunday here","a wasted day","a perfect day"],
+  ["Local coffee shop beer","warm","perfectly cold"],
+  ["Void deck funeral or wedding etiquette","relaxed","strictly observed"],
+  ["Things in a Singaporean's fridge","always there","gone the same day"],
+  ["Getting a table at lunch in the CBD","instant","forget it"],
+  ["Local phrases parents use","gentle","you are in serious trouble"],
+  ["Primary school canteen food","forgettable","you still dream about it"],
+  ["Places to escape the crowd on a weekend","still packed","genuinely empty"]
+];
+
+const GEN = [
+  ["Animals","the least popular pet","the most popular pet"],
+  ["Animals","completely harmless","would kill you"],
+  ["Animals","ugly","adorable"],
+  ["Animals","would lose any fight","would win any fight"],
+  ["Superpowers","useless","completely overpowered"],
+  ["Fictional villains","harmless","terrifying"],
+  ["Superheroes","the weakest","the strongest"],
+  ["Movies","you would never rewatch","you watch every year"],
+  ["Sequels","ruined the original","better than the original"],
+  ["Songs","forgotten in a second","stuck in your head for a week"],
+  ["Musical instruments","learn in an afternoon","a lifetime of practice"],
+  ["Board games","boring","brilliant"],
+  ["Video games","an hour of fun","eats your entire month"],
+  ["Cartoon characters","the worst housemate","the perfect housemate"],
+  ["Fictional worlds","you would never live there","you would move in tomorrow"],
+  ["Jobs","low stress","you will burn out"],
+  ["Jobs","you would hate your child to do it","you would love your child to do it"],
+  ["Jobs kids dream of","realistic","pure fantasy"],
+  ["School subjects","useless in real life","used every single day"],
+  ["Household chores","deeply satisfying","you avoid it forever"],
+  ["Ways to be woken up","gentle","brutal"],
+  ["Smells","awful","wonderful"],
+  ["Sounds","soothing","unbearable"],
+  ["Textures","pleasant to touch","makes your skin crawl"],
+  ["Kinds of pain","mild","unbearable"],
+  ["Fears","irrational","completely reasonable"],
+  ["Injuries","walk it off","go to A and E now"],
+  ["Illnesses","mild","serious"],
+  ["Small inconveniences","shrug it off","ruins your whole day"],
+  ["Lies","a harmless white lie","unforgivable"],
+  ["Secrets","fine to share","take it to the grave"],
+  ["Crimes","a small fine","a life sentence"],
+  ["Bad habits","harmless","an absolute deal breaker"],
+  ["First date red flags","ignorable","leave immediately"],
+  ["Things to say at a wedding","sweet","you will be uninvited"],
+  ["Texting habits","normal","block them"],
+  ["Group chat behaviours","fine","mute forever"],
+  ["Social media behaviour","acceptable","instant unfollow"],
+  ["Emojis","perfectly clear","nobody knows what it means"],
+  ["Housemate habits","tolerable","you are moving out"],
+  ["Things left in a shared fridge","fine","a biohazard"],
+  ["Gifts","thoughtless","perfect"],
+  ["Ways to celebrate a birthday","very low key","wildly over the top"],
+  ["Party games","kills the mood","gets everyone going"],
+  ["Icebreaker questions","safe","far too personal"],
+  ["Things to say in an interview","you are hired","you are escorted out"],
+  ["Excuses for being late","believable","nobody believes you"],
+  ["Reasons to cancel plans","totally valid","you will lose the friend"],
+  ["Ways to break up with someone","kind","cruel"],
+  ["Apologies","sincere","makes it worse"],
+  ["Compliments","awkward","makes their whole day"],
+  ["Nicknames","affectionate","fighting words"],
+  ["Insults","playful","genuinely hurtful"],
+  ["Things couples argue about","trivial","relationship ending"],
+  ["Deal breakers in a partner","workable","run"],
+  ["Wedding traditions","keep it forever","drop it immediately"],
+  ["Baby names","safe","the child will suffer"],
+  ["Parenting decisions","perfectly reasonable","someone should intervene"],
+  ["Ways to spend a day off","a wasted day","a perfect day"],
+  ["Holidays","exhausting","deeply restful"],
+  ["Countries to visit","hard to travel in","effortless"],
+  ["Travel experiences","forgettable","once in a lifetime"],
+  ["Things in your luggage","leave it at home","never travel without it"],
+  ["Aeroplane seats","the worst","the best"],
+  ["Aeroplane passenger behaviour","perfectly fine","should be banned from flying"],
+  ["Hotel amenities","you never notice","makes the whole stay"],
+  ["Ways to spend a windfall","very responsible","completely reckless"],
+  ["Ways to lose money","a slow bleed","gone overnight"],
+  ["Purchases","instant regret","best money ever spent"],
+  ["Subscriptions","cancel today","worth every cent"],
+  ["Things to buy","always buy the cheapest","always buy the best"],
+  ["Second-hand items","fine used","always buy new"],
+  ["Foods","disgusting","delicious"],
+  ["Foods","genuinely healthy","will end you"],
+  ["Pizza toppings","criminal","essential"],
+  ["Leftovers","terrible the next day","better the next day"],
+  ["Cooking skills","anyone can do it","professional level"],
+  ["Kitchen disasters","wipe it up","call the fire brigade"],
+  ["Drinks","no hangover","a two-day hangover"],
+  ["Coffee orders","barely coffee","your heart will race"],
+  ["Vegetables","universally hated","universally loved"],
+  ["Fruits","effortless to eat","far too much work"],
+  ["Condiments","goes with nothing","goes on everything"],
+  ["Snacks","one is enough","whole packet gone"],
+  ["Desserts","barely sweet","pure sugar"],
+  ["Restaurant behaviour","perfectly fine","the staff will remember you"],
+  ["Diets","sustainable","you quit by Wednesday"],
+  ["Exercises","easy","you cannot walk tomorrow"],
+  ["Sports","completely safe","genuinely dangerous"],
+  ["Sports","boring to watch","thrilling to watch"],
+  ["Olympic events","anyone could try it","needs a whole lifetime"],
+  ["Morning routines","changes nothing","changes your whole day"],
+  ["Historical figures","a terrible dinner guest","an amazing dinner guest"],
+  ["Time periods to live in","terrible","wonderful"],
+  ["Inventions","minor","changed the world"],
+  ["Technologies","a gimmick","completely essential"],
+  ["Apps","delete it","cannot live without it"],
+  ["Passwords","cracked in a second","unbreakable"],
+  ["Scams","obvious","you would fall for it"],
+  ["Tasks to hand to a robot","let it do everything","never, not once"],
+  ["Conspiracy theories","ridiculous","hmm, maybe"],
+  ["Predictions about the future","definitely happening","never happening"],
+  ["Ways the world could end","very unlikely","uncomfortably likely"],
+  ["Survival skills","useless","you would rule the wasteland"],
+  ["Things to have in an apocalypse","useless","priceless"],
+  ["Things to bring to a desert island","pointless","the one thing you need"],
+  ["Dares","easy","you would never"],
+  ["Ways to embarrass yourself","forgotten in a minute","you move to another city"],
+  ["Public speaking situations","easy","terrifying"],
+  ["Awkward moments","laugh it off","you think about it at 3am forever"],
+  ["Things people do for money","completely normal","you would never"],
+  ["Rules worth breaking","never break it","always break it"],
+  ["Ways to procrastinate","mild","elite level"],
+  ["Weather","pleasant","stay indoors"],
+  ["Natural disasters","survivable","terrifying"],
+  ["Colours","calming","aggressive"],
+  ["Pet names","boring","you will be judged at the vet"],
+  ["Things in a bag","never used","used every day"],
+  ["Things to keep in a car","pure clutter","a life saver"],
+  ["Clothing","supremely comfortable","suffering for fashion"],
+  ["Shoes","all-day comfort","blisters by lunch"],
+  ["Fashion trends","timeless","delete the photos"],
+  ["Haircuts","very safe","wear a cap for a month"],
+  ["Tattoos","you would get one tomorrow","absolutely never"],
+  ["Ways to decorate a room","tasteful","complete chaos"],
+  ["Flat-pack furniture","assembled in ten minutes","a relationship test"],
+  ["DIY jobs","do it yourself","call a professional"],
+  ["Pets","low maintenance","a second full-time job"],
+  ["Houseplants","impossible to kill","dies if you look at it"],
+  ["Hobbies","cheap","a bottomless money pit"],
+  ["Collectibles","worthless","sell the car for it"],
+  ["Skills","learn in an afternoon","a whole lifetime"],
+  ["Languages","easy to learn","brutally hard"],
+  ["Books","you will never finish it","you finish it in one night"],
+  ["Internet memes","long dead","immortal"],
+  ["Ways to make an entrance","unnoticed","everyone turns"],
+  ["Board game players","a joy to play with","never invite them again"],
+  ["Group holiday roles","carries the trip","ruins the trip"],
+  ["Types of laugh","charming","clear the room"],
+  ["Handshakes","limp","bone crushing"],
+  ["Ways to say goodbye","warm","ice cold"],
+  ["Things to find in an old drawer","junk","treasure"],
+  ["Smells that trigger memories","nothing at all","instant time travel"],
+  ["Ways to spend the last hour before a deadline","calm","total panic"],
+  ["Group project members","carried the team","did nothing at all"],
+  ["Things to keep in a wallet","dead weight","you would panic without it"],
+  ["Advice from older relatives","ignore it","genuinely wise"],
+  ["Emails from your boss","harmless","update your CV"],
+  ["Reasons to stay up past 2am","completely worth it","you will regret it"],
+  ["Things to say to a taxi driver","small talk","a whole life story"]
+];
+
+const ALL = [
+  ...SG.map(t => ({cat:"sg", t})),
+  ...GEN.map(t => ({cat:"gen", t}))
+];
+
+/* ---------------- state ---------------- */
+const el = id => document.getElementById(id);
+let mode = "all";
+let bag = [];
+let drawn = 0;
+
+try { const m = localStorage.getItem("ito-mode"); if (m) mode = m; } catch (e) {}
+
+function pool(){
+  return mode === "all" ? ALL : ALL.filter(x => x.cat === mode);
+}
+
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function refill(){ bag = shuffle(pool().slice()); }
+
+function updateCount(){
+  el("count").textContent = drawn + " drawn · " + bag.length + " left of " + pool().length;
+}
+
+function draw(){
+  if (!bag.length){ refill(); drawn = 0; }
+  const card = bag.pop();
+  const [prompt, lo, hi] = card.t;
+
+  el("tag").textContent = card.cat === "sg" ? "Singapore" : "General";
+  el("tag").className = "tag" + (card.cat === "sg" ? " sg" : "");
+  el("theme").textContent = prompt;
+  el("sub").textContent = "Name something that fits — then place it on the scale without saying a number.";
+  el("lo").textContent = lo;
+  el("hi").textContent = hi;
+  drawn++;
+  updateCount();
+
+  const c = el("card");
+  c.classList.remove("anim");
+  void c.offsetWidth;
+  c.classList.add("anim");
+}
+
+function setMode(m){
+  mode = m;
+  try { localStorage.setItem("ito-mode", m); } catch (e) {}
+  document.querySelectorAll(".chip").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  refill();
+  drawn = 0;
+  updateCount();
+}
+
+/* ---------------- scale marks ---------------- */
+const ticks = el("ticks"), nums = el("nums");
+for (let i = 1; i <= 10; i++){
+  const t = document.createElement("i");
+  t.style.background = "hsl(" + (208 - (i - 1) * 22) + " 62% 52%)";
+  t.style.opacity = (0.55 + i * 0.045).toFixed(2);
+  ticks.appendChild(t);
+  const n = document.createElement("i");
+  n.textContent = i;
+  nums.appendChild(n);
+}
+
+/* ---------------- wiring ---------------- */
+document.querySelectorAll(".chip").forEach(b =>
+  b.addEventListener("click", () => setMode(b.dataset.mode)));
+el("draw").addEventListener("click", draw);
+el("card").addEventListener("click", draw);
+el("card").addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); draw(); }
+});
+el("reset").addEventListener("click", () => { refill(); drawn = 0; updateCount(); });
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "BUTTON" && e.key === " ") return;
+  if (e.key === " " || e.key === "ArrowRight"){ e.preventDefault(); draw(); }
+});
+
+setMode(mode);
+</script>
+</body>
+</html>
