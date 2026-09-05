@@ -86,11 +86,21 @@
     background-image:radial-gradient(rgba(0,0,0,.05) 1px,transparent 1px);background-size:4px 4px;
   }
   .card:active{transform:scale(.996)}
+  .topRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .tag{
     align-self:flex-start;font-size:10.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
     padding:5px 10px;border-radius:999px;background:var(--blue-soft);color:var(--blue);
   }
   .tag.sg{background:var(--red-soft);color:var(--red)}
+  .votes{display:flex;gap:6px;flex:none}
+  .vote{
+    appearance:none;cursor:pointer;font:inherit;font-size:12px;font-weight:600;
+    display:inline-flex;align-items:center;gap:4px;
+    background:rgba(0,0,0,.03);color:var(--muted);border:1px solid rgba(0,0,0,.12);
+    border-radius:999px;padding:5px 9px;min-height:28px;
+    font-variant-numeric:tabular-nums;transition:background .15s ease;
+  }
+  .vote:active{transform:scale(.94)}
   .body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
   .theme{
     font-family:"Instrument Serif",Georgia,serif;font-weight:400;
@@ -112,7 +122,7 @@
   .nums i{font-style:normal;text-align:center;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
 
   @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
-  .anim .tag,.anim .body,.anim .scale{animation:rise .34s cubic-bezier(.2,.7,.3,1) both}
+  .anim .topRow,.anim .body,.anim .scale{animation:rise .34s cubic-bezier(.2,.7,.3,1) both}
   .anim .body{animation-delay:.04s}
   .anim .scale{animation-delay:.08s}
 
@@ -204,6 +214,7 @@
     .chip[aria-pressed="true"]:hover{background:var(--paper);color:var(--text)}
     .draw:hover{filter:brightness(1.08)}
     .ghost:hover{color:#f3ece2;border-color:rgba(255,255,255,.28)}
+    .vote:hover{background:rgba(0,0,0,.07)}
   }
   /* type scale keyed to the card itself and to how long the theme is:
      a one-word theme gets set large, a nine-word theme stays readable */
@@ -231,8 +242,14 @@
     <button class="chip" data-mode="gen" aria-pressed="false">General</button>
   </div>
 
-  <button class="card anim" id="card" aria-live="polite">
-    <span class="tag" id="tag">Ready</span>
+  <div class="card anim" id="card" role="button" tabindex="0" aria-live="polite">
+    <span class="topRow">
+      <span class="tag" id="tag">Ready</span>
+      <span class="votes" id="votes">
+        <button class="vote" id="voteUp" type="button" aria-label="Thumbs up this theme">👍 <b id="upCount">&ndash;</b></button>
+        <button class="vote" id="voteDown" type="button" aria-label="Thumbs down this theme">👎 <b id="downCount">&ndash;</b></button>
+      </span>
+    </span>
     <span class="body">
       <span class="theme" id="theme">Tap to draw a theme</span>
       <span class="sub" id="sub">Everyone holds a secret number from 1 to 10. Describe it as something on the scale — never say the number.</span>
@@ -245,7 +262,7 @@
       <span class="ticks" id="ticks"></span>
       <span class="nums" id="nums"></span>
     </span>
-  </button>
+  </div>
 
   <div class="dock">
     <div class="controls">
@@ -619,8 +636,8 @@ const GEN = [
 
 
 const ALL = [
-  ...SG.map(t => ({cat:"sg", t})),
-  ...GEN.map(t => ({cat:"gen", t}))
+  ...SG.map((t, i) => ({cat:"sg", t, i})),
+  ...GEN.map((t, i) => ({cat:"gen", t, i}))
 ];
 
 /* ---------------- settings, persisted ---------------- */
@@ -666,10 +683,13 @@ function shuffle(a){
 const refill = () => { bag = shuffle(pool().slice()); };
 const updateCount = () => { el("count").textContent = bag.length + " left of " + pool().length; };
 
+let currentCard = null;
+
 function draw(){
   if (!bag.length) refill();
   const card = bag.pop();
   const [prompt, lo, hi] = card.t;
+  currentCard = card;
 
   el("tag").textContent = card.cat === "sg" ? "Singapore" : "General";
   el("tag").className = "tag" + (card.cat === "sg" ? " sg" : "");
@@ -679,12 +699,63 @@ function draw(){
   el("lo").textContent = lo;
   el("hi").textContent = hi;
   updateCount();
+  loadVotes(card);
 
   const c = el("card");
   c.classList.remove("anim");
   void c.offsetWidth;
   c.classList.add("anim");
 }
+
+/* ---------------- thumbs up/down, backed by a free public counter API ---------------- */
+const VOTE_API = "https://abacus.jasoncameron.dev";
+const VOTE_NS = "ito-theme-deck-sg-edition";
+const voteKey = c => c.cat + "-" + c.i;
+
+function parseCount(data){
+  if (typeof data === "number") return data;
+  if (data && typeof data.value === "number") return data.value;
+  if (data && typeof data.count === "number") return data.count;
+  return null;
+}
+
+async function loadVotes(card){
+  const id = voteKey(card);
+  el("upCount").textContent = "–";
+  el("downCount").textContent = "–";
+  try {
+    const [u, d] = await Promise.all([
+      fetch(VOTE_API + "/get/" + VOTE_NS + "/" + id + "-up").then(r => r.ok ? r.json() : null),
+      fetch(VOTE_API + "/get/" + VOTE_NS + "/" + id + "-down").then(r => r.ok ? r.json() : null)
+    ]);
+    if (card !== currentCard) return; // a later draw already replaced this card
+    el("upCount").textContent = parseCount(u) ?? 0;
+    el("downCount").textContent = parseCount(d) ?? 0;
+  } catch (e) {
+    if (card !== currentCard) return;
+    el("upCount").textContent = 0;
+    el("downCount").textContent = 0;
+  }
+}
+
+async function castVote(kind){
+  if (!currentCard) return;
+  const card = currentCard;
+  const id = voteKey(card);
+  const countEl = el(kind === "up" ? "upCount" : "downCount");
+  const prev = Number(countEl.textContent) || 0;
+  countEl.textContent = prev + 1; // optimistic, so it feels instant even offline
+  try {
+    const res = await fetch(VOTE_API + "/hit/" + VOTE_NS + "/" + id + "-" + kind);
+    if (!res.ok || card !== currentCard) return;
+    const data = await res.json();
+    const n = parseCount(data);
+    if (n !== null) countEl.textContent = n;
+  } catch (e) { /* offline or blocked - keep the optimistic count */ }
+}
+
+el("voteUp").addEventListener("click", e => { e.stopPropagation(); castVote("up"); });
+el("voteDown").addEventListener("click", e => { e.stopPropagation(); castVote("down"); });
 
 /* ---------------- the number / card scale ---------------- */
 const CARD_RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
@@ -803,7 +874,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") return closeSheets();
   if (document.querySelector(".sheet[open]")) return;
   if (e.target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
-  if (e.key === " " || e.key === "ArrowRight"){ e.preventDefault(); draw(); }
+  if (e.key === " " || e.key === "ArrowRight" || e.key === "Enter"){ e.preventDefault(); draw(); }
 });
 
 renderScale();
