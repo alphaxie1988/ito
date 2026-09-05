@@ -106,9 +106,9 @@
   .ends .r{text-align:right}
   .ends b{display:block;font-family:"Instrument Serif",Georgia,serif;font-size:18px;font-weight:400;line-height:1}
   .ends span{font-size:12.5px;color:var(--muted);line-height:1.3;display:block;margin-top:3px}
-  .ticks{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+  .ticks{display:grid;gap:3px}
   .ticks i{height:10px;border-radius:3px;font-style:normal;background:rgba(0,0,0,.14)}
-  .nums{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:5px}
+  .nums{display:grid;gap:3px;margin-top:5px}
   .nums i{font-style:normal;text-align:center;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
 
   @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
@@ -154,12 +154,14 @@
     align-items:center;column-gap:14px;
     padding:17px 0;border-top:1px solid var(--line)}
   .set-row:first-child{border-top:0}
+  .set-row.stack{grid-template-columns:1fr;grid-template-areas:"label" "control" "cap"}
+  .set-row.stack .seg{margin-top:12px}
   .set-text{display:contents}
   .set-label{grid-area:label;font-size:15px;font-weight:500;color:#f3ece2}
   .set-cap{grid-area:cap;font-size:12.5px;color:#8e8377;line-height:1.5;margin:9px 0 0}
   .seg,.switch{grid-area:control}
-  .seg{display:flex;flex:none;gap:3px;padding:3px;border-radius:13px;background:#141211;border:1px solid var(--line)}
-  .seg button{appearance:none;border:0;background:transparent;color:#a79d92;
+  .seg{display:flex;flex:none;flex-wrap:wrap;gap:3px;padding:3px;border-radius:13px;background:#141211;border:1px solid var(--line)}
+  .seg button{appearance:none;border:0;background:transparent;color:#a79d92;flex:1 1 auto;
     font:inherit;font-size:13px;font-weight:500;min-height:38px;padding:0 13px;
     border-radius:10px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
   .seg button[aria-pressed="true"]{background:var(--paper);color:var(--text);font-weight:600}
@@ -237,7 +239,7 @@
     </span>
     <span class="scale">
       <span class="ends">
-        <span><b>1</b><span id="lo">the low end</span></span>
+        <span><b id="loNum">1</b><span id="lo">the low end</span></span>
         <span class="r"><b id="hiNum">10</b><span id="hi">the high end</span></span>
       </span>
       <span class="ticks" id="ticks"></span>
@@ -260,7 +262,7 @@
     <h2>How to play</h2>
     <ol>
       <li id="ruleDeal">Deal every player <strong>one secret number from 1 to 10</strong>, all different. Cut ten slips of paper and deal one each.</li>
-      <li>Draw a theme. It sets the scale: <strong>1 is the low end, <span class="rmax">10</span> is the high end.</strong></li>
+      <li>Draw a theme. It sets the scale: <strong><span class="rmin">1</span> is the low end, <span class="rmax">10</span> is the high end.</strong></li>
       <li>Each player names something that fits the theme at roughly their number. <strong>Never say a number</strong>, and never call your answer high or low outright.</li>
       <li>Compare, ask for more examples, then lay the slips face-up in <strong>ascending order</strong>, lowest first.</li>
       <li>Every slip played out of order costs a life. Three lives, three rounds.</li>
@@ -275,7 +277,7 @@
     <h2>Settings</h2>
     <div class="set">
 
-      <div class="set-row">
+      <div class="set-row stack">
         <span class="set-text">
           <span class="set-label">Number range</span>
           <p class="set-cap" id="scaleCap">Ten slips of paper, up to ten players.</p>
@@ -283,6 +285,8 @@
         <span class="seg" role="group" aria-label="Number range">
           <button data-scale="10" aria-pressed="true">1&ndash;10</button>
           <button data-scale="100" aria-pressed="false">1&ndash;100</button>
+          <button data-scale="cards" aria-pressed="false">A&ndash;K</button>
+          <button data-scale="jokers" aria-pressed="false">A&ndash;K + Joker</button>
         </span>
       </div>
 
@@ -623,13 +627,14 @@ const ALL = [
 const el = id => document.getElementById(id);
 const STORE = "ito-settings-v1";
 
-const settings = {mode:"all", scale:10, kids:false};
+const SCALES = ["10","100","cards","jokers"];
+const settings = {mode:"all", scale:"10", kids:false};
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || "null");
   if (saved && typeof saved === "object") {
     if (["all","sg","gen"].includes(saved.mode)) settings.mode = saved.mode;
-    if (saved.scale === 10 || saved.scale === 100) settings.scale = saved.scale;
+    if (SCALES.includes(String(saved.scale))) settings.scale = String(saved.scale);
     settings.kids = !!saved.kids;
   } else {
     const legacy = localStorage.getItem("ito-mode");      // pre-settings builds
@@ -681,30 +686,58 @@ function draw(){
   c.classList.add("anim");
 }
 
-/* ---------------- the 1-10 / 1-100 scale ---------------- */
+/* ---------------- the number / card scale ---------------- */
+const CARD_RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 const ticks = el("ticks"), nums = el("nums");
-for (let i = 1; i <= 10; i++){
-  const t = document.createElement("i");
-  t.style.background = "hsl(" + (208 - (i - 1) * 22) + " 62% 52%)";
-  t.style.opacity = (0.55 + i * 0.045).toFixed(2);
-  ticks.appendChild(t);
-  nums.appendChild(document.createElement("i"));
-}
 
 function renderScale(){
-  const max = settings.scale;
-  const step = max / 10;                         // 1..10, or decades to 100
-  [...nums.children].forEach((n, i) => { n.textContent = (i + 1) * step; });
-  el("hiNum").textContent = max;
-  document.querySelectorAll(".rmax").forEach(n => { n.textContent = max; });
-  el("ruleDeal").innerHTML = max === 10
-    ? "Deal every player <strong>one secret number from 1 to 10</strong>, all different. Cut ten slips of paper and deal one each."
-    : "Deal every player <strong>one secret number from 1 to 100</strong>, all different. Use the physical ito deck, or a random number app.";
-  el("scaleCap").textContent = max === 10
-    ? "Ten slips of paper, up to ten players."
-    : "Matches the physical ito deck."; 
+  const s = settings.scale;
+  const isCards = s === "cards" || s === "jokers";
+  const labels = isCards
+    ? (s === "jokers" ? CARD_RANKS.concat("JKR") : CARD_RANKS.slice())
+    : Array.from({length:10}, (_, i) => String((i + 1) * (Number(s) / 10)));
+  const count = labels.length;
+  const loLabel = isCards ? "A" : "1";
+  const hiLabel = labels[count - 1];
+
+  ticks.style.gridTemplateColumns = "repeat(" + count + ",1fr)";
+  nums.style.gridTemplateColumns = "repeat(" + count + ",1fr)";
+  ticks.innerHTML = "";
+  nums.innerHTML = "";
+  for (let i = 0; i < count; i++){
+    const t = document.createElement("i");
+    const hue = count > 1 ? 208 - i * (198 / (count - 1)) : 208;
+    t.style.background = "hsl(" + hue + " 62% 52%)";
+    t.style.opacity = (0.55 + (i + 1) * (0.45 / count)).toFixed(2);
+    ticks.appendChild(t);
+    const n = document.createElement("i");
+    n.textContent = labels[i];
+    nums.appendChild(n);
+  }
+
+  el("loNum").textContent = loLabel;
+  el("hiNum").textContent = hiLabel;
+  document.querySelectorAll(".rmin").forEach(n => { n.textContent = loLabel; });
+  document.querySelectorAll(".rmax").forEach(n => { n.textContent = hiLabel; });
+
+  el("ruleDeal").innerHTML = s === "jokers"
+    ? "Deal every player <strong>one card from a standard deck, Ace to King, plus a Joker</strong>, all different. The Joker always sits at the very top."
+    : s === "cards"
+    ? "Deal every player <strong>one card from a standard deck, Ace to King</strong>, all different."
+    : s === "100"
+    ? "Deal every player <strong>one secret number from 1 to 100</strong>, all different. Use the physical ito deck, or a random number app."
+    : "Deal every player <strong>one secret number from 1 to 10</strong>, all different. Cut ten slips of paper and deal one each.";
+
+  el("scaleCap").textContent = s === "jokers"
+    ? "A standard deck (Ace to King) plus one Joker as the top card."
+    : s === "cards"
+    ? "A standard deck of playing cards, Ace low to King high."
+    : s === "100"
+    ? "Matches the physical ito deck."
+    : "Ten slips of paper, up to ten players.";
+
   document.querySelectorAll("[data-scale]").forEach(b =>
-    b.setAttribute("aria-pressed", String(Number(b.dataset.scale) === max)));
+    b.setAttribute("aria-pressed", String(b.dataset.scale === s)));
 }
 
 /* ---------------- filters ---------------- */
@@ -734,7 +767,7 @@ document.querySelectorAll(".chip").forEach(b =>
 
 document.querySelectorAll("[data-scale]").forEach(b =>
   b.addEventListener("click", () => {
-    settings.scale = Number(b.dataset.scale);
+    settings.scale = b.dataset.scale;
     renderScale();
     save();
   }));
