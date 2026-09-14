@@ -1,6 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KTJTR3X63V"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KTJTR3X63V');
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ito — Theme Deck (SG Edition)</title>
@@ -278,11 +288,11 @@
   <div class="sheet-inner" tabindex="-1" id="sheetInner">
     <h2>How to play</h2>
     <ol>
-      <li id="ruleDeal">Deal every player <strong>one secret number from 1 to 10</strong>, all different. Cut ten slips of paper and deal one each.</li>
+      <li id="ruleDeal">Deal every player <strong>one secret number from 1 to 10</strong>, all different. Take A to 10 of one suit from a poker deck and deal one card each, face down.</li>
       <li>Draw a theme. It sets the scale: <strong><span class="rmin">1</span> is the low end, <span class="rmax">10</span> is the high end.</strong></li>
       <li>Each player names something that fits the theme at roughly their number. <strong>Never say a number</strong>, and never call your answer high or low outright.</li>
-      <li>Compare, ask for more examples, then lay the slips face-up in <strong>ascending order</strong>, lowest first.</li>
-      <li>Every slip played out of order costs a life. Three lives, three rounds.</li>
+      <li>Compare, ask for more examples, then lay the cards face-up in <strong>ascending order</strong>, lowest first.</li>
+      <li>Every card played out of order costs a life. Three lives, three rounds.</li>
     </ol>
     <p>Harder: two numbers each, or ban the first answer everyone thinks of.</p>
     <button class="close" id="close">Back to the game</button>
@@ -297,7 +307,7 @@
       <div class="set-row stack">
         <span class="set-text">
           <span class="set-label">Number range</span>
-          <p class="set-cap" id="scaleCap">Ten slips of paper, up to ten players.</p>
+          <p class="set-cap" id="scaleCap">A to 10 of one suit, up to ten players.</p>
         </span>
         <span class="seg" role="group" aria-label="Number range">
           <button data-scale="10" aria-pressed="true">1&ndash;10</button>
@@ -936,7 +946,7 @@ function renderScale(){
     ? "Deal every player <strong>one card from a standard deck, Ace to King</strong>, all different."
     : s === "100"
     ? "Deal every player <strong>one secret number from 1 to 100</strong>, all different. Use the physical ito deck, or a random number app."
-    : "Deal every player <strong>one secret number from 1 to 10</strong>, all different. Cut ten slips of paper and deal one each.";
+    : "Deal every player <strong>one secret number from 1 to 10</strong>, all different. Take A to 10 of one suit from a poker deck and deal one card each, face down.";
 
   el("scaleCap").textContent = s === "jokers"
     ? "A standard deck (Ace to King) plus one Joker as the top card."
@@ -944,7 +954,7 @@ function renderScale(){
     ? "A standard deck of playing cards, Ace low to King high."
     : s === "100"
     ? "Matches the physical ito deck."
-    : "Ten slips of paper, up to ten players.";
+    : "A to 10 of one suit, up to ten players.";
 
   document.querySelectorAll("[data-scale]").forEach(b =>
     b.setAttribute("aria-pressed", String(b.dataset.scale === s)));
