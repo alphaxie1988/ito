@@ -304,6 +304,7 @@
           <button data-scale="100" aria-pressed="false">1&ndash;100</button>
           <button data-scale="cards" aria-pressed="false">A&ndash;K</button>
           <button data-scale="jokers" aria-pressed="false">A&ndash;K + Joker 🃏</button>
+          <button data-scale="big2" aria-pressed="false">Big Two</button>
         </span>
       </div>
 
@@ -744,7 +745,7 @@ const ALL = [
 const el = id => document.getElementById(id);
 const STORE = "ito-settings-v1";
 
-const SCALES = ["10","100","cards","jokers"];
+const SCALES = ["10","100","cards","jokers","big2"];
 const settings = {mode:"all", scale:"10", kids:false};
 
 try {
@@ -898,17 +899,21 @@ el("voteDown").addEventListener("click", e => { e.stopPropagation(); castVote("d
 
 /* ---------------- the number / card scale ---------------- */
 const CARD_RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+const BIG2_RANKS = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
 const ticks = el("ticks"), nums = el("nums");
 
 function renderScale(){
   const s = settings.scale;
   const isCards = s === "cards" || s === "jokers";
-  const labels = isCards
+  const isBig2 = s === "big2";
+  const labels = isBig2
+    ? BIG2_RANKS.slice()
+    : isCards
     ? (s === "jokers" ? CARD_RANKS.concat("🃏") : CARD_RANKS.slice())
     : Array.from({length:10}, (_, i) => String((i + 1) * (Number(s) / 10)));
   const count = labels.length;
-  const loLabel = isCards ? "A" : "1";
-  const hiLabel = labels[count - 1];
+  const loLabel = isBig2 ? "3♦" : isCards ? "A" : "1";
+  const hiLabel = isBig2 ? "2♠" : labels[count - 1];
 
   ticks.style.gridTemplateColumns = "repeat(" + count + ",1fr)";
   nums.style.gridTemplateColumns = "repeat(" + count + ",1fr)";
@@ -930,7 +935,9 @@ function renderScale(){
   document.querySelectorAll(".rmin").forEach(n => { n.textContent = loLabel; });
   document.querySelectorAll(".rmax").forEach(n => { n.textContent = hiLabel; });
 
-  el("ruleDeal").innerHTML = s === "jokers"
+  el("ruleDeal").innerHTML = s === "big2"
+    ? "Deal every player <strong>one card from a full deck, ranked Big Two style</strong>, all different: 3 is lowest, 2 is highest, and within the same number diamonds &lt; clubs &lt; hearts &lt; spades breaks the tie."
+    : s === "jokers"
     ? "Deal every player <strong>one card from a standard deck, Ace to King, plus a Joker</strong>, all different. The Joker always sits at the very top."
     : s === "cards"
     ? "Deal every player <strong>one card from a standard deck, Ace to King</strong>, all different."
@@ -938,7 +945,9 @@ function renderScale(){
     ? "Deal every player <strong>one secret number from 1 to 100</strong>, all different. Use the physical ito deck, or a random number app."
     : "Deal every player <strong>one secret number from 1 to 10</strong>, all different. Cut ten slips of paper and deal one each.";
 
-  el("scaleCap").textContent = s === "jokers"
+  el("scaleCap").textContent = s === "big2"
+    ? "A full 52-card deck ranked the Big Two way: 3♦ lowest, 2♠ highest. Up to 52 players."
+    : s === "jokers"
     ? "A standard deck (Ace to King) plus one Joker as the top card."
     : s === "cards"
     ? "A standard deck of playing cards, Ace low to King high."
